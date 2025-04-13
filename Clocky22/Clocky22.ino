@@ -98,6 +98,7 @@ void dinClockOff(){
   dinClockTimer.cancel();
  
   digitalWrite(DINCLOCKPIN, LOW);
+  return false;
 }
 
 void handleTick(){
@@ -110,7 +111,7 @@ void handleTick(){
     digitalWrite(ANALOGCLOCKPIN, LOW);
   }
   currentDiv++;
-  if (currentDiv>=24){
+  if (currentDiv>23){
     currentDiv = 0;
   }
   if(test){
@@ -121,6 +122,7 @@ void handleTick(){
   }
   digitalWrite(DINCLOCKPIN, HIGH);
   dinClockTimer.in(ppqMs/2, dinClockOff);
+  return false;
 }
 
 void toggleState() {
@@ -134,6 +136,7 @@ void toggleState() {
     currentDiv = 0;
     digitalWrite(DINSTARTPIN, HIGH);
     playing = true;
+    handleTick();
    } else {
       
       currentDiv = 0;
@@ -193,27 +196,39 @@ void loop() {
   
   ppqMs =  (60000/bpm)/24;
   
-  swingOffset = ((pot1Avg/1023.0)*ppqMs);
+  swingOffset = ((pot1Avg/1023.0)*(ppqMs));
+  swingOffset = swingOffset*.4;
 
-  if(test){
-      //Serial.println(ppqMs);
-      //Serial.println(bpm);
-      //Serial.println(swingOffset);
-  }
+  
 
   
   if((!ticking)&&(playing==true)){
+    if(test){
+      if(currentDiv%6==0){
+        Serial.println(swingOffset);
+        Serial.println(ppqMs);
+        Serial.println(bpm);
+      }
+      
+    }
     ticking = true;
     // 16th delay
+    // scheme: move 2nd and 4th 16th time
+
     
-    if((currentDiv)>5&&(currentDiv<12)){
-      clockTimer.in(ppqMs+swingOffset, handleTick);
-      //clockTimer.in(ppqMs, handleTick);
-    }else if(currentDiv>17){
-      clockTimer.in(ppqMs+swingOffset, handleTick);
-    }else{
+    if((currentDiv==6)){
+      clockTimer.in(ppqMs+(swingOffset*6), handleTick);
+    }else if((currentDiv>=7)&&(currentDiv<12)){
+      clockTimer.in(ppqMs-swingOffset, handleTick);
+    }else
+    if((currentDiv==18)){
+      clockTimer.in(ppqMs+(swingOffset*6), handleTick);
+    }else if((currentDiv>=19)&&(currentDiv<23)){
+      clockTimer.in(ppqMs-swingOffset, handleTick);
+    }else{ 
       clockTimer.in(ppqMs, handleTick);
     }
+
 
     if(currentDiv < 5){
       digitalWrite(CLOCKLED, HIGH);
@@ -221,16 +236,11 @@ void loop() {
       digitalWrite(CLOCKLED, LOW);
     } 
     
-    //8th delay
-    /*
-    if(currentDiv>11){
-      clockTimer.in(ppqMs+swingOffset, handleTick);
-    }else{
-      clockTimer.in(ppqMs, handleTick);
-    }*/
+    
   }
   
   clockTimer.tick();
   dinClockTimer.tick();
+  //handleTick();
   
 }
